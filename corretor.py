@@ -168,9 +168,9 @@ def export_to_excel(resultados, gabarito, filename="resultados.xlsx"):
     headers = ["Aluno", "Prova"] + questoes + ["Total"]
     ws.append(headers)
 
-    red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
-    blue_fill = PatternFill(start_color="FF00FF00", end_color="FF00FF00", fill_type="solid") #verde
-    green_fill = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")# amarelo
+    vermelho_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+    verde_fill = PatternFill(start_color="FF00FF00", end_color="FF00FF00", fill_type="solid") #verde
+    amarelo_fill = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")# amarelo
 
     # ----------------------------
     # Gabaritos oficiais de todas as provas
@@ -226,20 +226,20 @@ def export_to_excel(resultados, gabarito, filename="resultados.xlsx"):
                 if resposta_aluno == correta:
                     peso_alt = pesos_alt.get(resposta_aluno, 0.0)
                     if abs(peso_alt - 1.0) < 1e-6:
-                        cell.fill = blue_fill  # acerto total
+                        cell.fill = verde_fill  # acerto total
                     elif 0.1 < peso_alt < 1.0:
-                        cell.fill = green_fill  # acerto parcial (correta, mas peso parcial)
+                        cell.fill = amarelo_fill  # acerto parcial (correta, mas peso parcial)
                     else:
-                        cell.fill = red_fill
+                        cell.fill = vermelho_fill
                 else:
                     # resposta diferente da correta
                     peso_alt = pesos_alt.get(resposta_aluno, 0.0)
                     if peso_alt > 0.0:
-                        cell.fill = green_fill  # acerto parcial
+                        cell.fill = amarelo_fill  # acerto parcial
                     else:
-                        cell.fill = red_fill
+                        cell.fill = vermelho_fill
             else:
-                cell.fill = red_fill
+                cell.fill = vermelho_fill
 
 
     wb.save(filename)

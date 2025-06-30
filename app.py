@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, render_template, redirect, url_for, send_file
+from flask import Flask, request, render_template, redirect, url_for, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import json # Para lidar com as respostas certas de forma mais flexível
@@ -11,10 +11,13 @@ from corretor import load_gabarito, run_correction, load_and_preprocess_image # 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/' # Pasta para uploads de imagens
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
+app.config['TEMPLATE_GABARITO_FOLDER'] = 'templates_gabarito/' # <--- NOVA CONFIGURAÇÃO
 
 # Certifica que a pasta de uploads existe
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+if not os.path.exists(app.config['TEMPLATE_GABARITO_FOLDER']): # <--- Verifica e cria a pasta de modelos
+    os.makedirs(app.config['TEMPLATE_GABARITO_FOLDER'])
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -23,6 +26,14 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Nova rota para download dos modelos de gabarito
+@app.route('/download_template/<filename>')
+def download_template(filename):
+    try:
+        return send_from_directory(app.config['TEMPLATE_GABARITO_FOLDER'], filename, as_attachment=True)
+    except FileNotFoundError:
+        return "Arquivo não encontrado.", 404
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
