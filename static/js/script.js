@@ -8,15 +8,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Este é um exemplo, você precisaria adaptar com base na sua lógica de gabarito
     const gabaritoExample = {
         'Q1': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 1.0, 'B': 0.0, 'C': 0.0, 'D': 0.0, 'E': 0.0}, 'correta': 'A' },
-        'Q2': { 'peso_questao': 1.5, 'pesos_alternativas': {'A': 0.0, 'B': 1.0, 'C': 0.0, 'D': 0.0, 'E': 0.0}, 'correta': 'B' },
-        'Q3': { 'peso_questao': 2.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 1.0, 'D': 0.0, 'E': 0.0}, 'correta': 'C' },
+        'Q2': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 1.0, 'C': 0.0, 'D': 0.0, 'E': 0.0}, 'correta': 'B' },
+        'Q3': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 1.0, 'D': 0.0, 'E': 0.0}, 'correta': 'C' },
         'Q4': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 1.0, 'E': 0.7}, 'correta': 'D' },
         'Q5': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 1.0, 'E': 0.0}, 'correta': 'D' },
         'Q6': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 0.0, 'E': 1.0}, 'correta': 'E' },
-        'Q7': { 'peso_questao': 1.5, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 0.0, 'E': 1.0}, 'correta': 'E' },
-        'Q8': { 'peso_questao': 2.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 1.0, 'E': 0.0}, 'correta': 'D' },
+        'Q7': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 0.0, 'E': 1.0}, 'correta': 'E' },
+        'Q8': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 1.0, 'E': 0.0}, 'correta': 'D' },
         'Q9': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 1.0, 'D': 0.0, 'E': 0.0}, 'correta': 'C' },
-        'Q10': { 'peso_questao': 1.5, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 1.0, 'E': 0.0}, 'correta': 'D' }
+        'Q10': { 'peso_questao': 1.0, 'pesos_alternativas': {'A': 0.0, 'B': 0.0, 'C': 0.0, 'D': 1.0, 'E': 0.0}, 'correta': 'D' }
     };
 
     function generateExamAnswerFields() {
