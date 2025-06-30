@@ -3,3 +3,4 @@ Werkzeug
 numpy
 opencv-python
 openpyxl
+gunicorn
