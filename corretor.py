@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
 import cv2
 import numpy as np
 import os
 import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
+from multiprocessing import Pool, cpu_count
 
 # ---------- FUNÇÕES DE ANÁLISE DA IMAGEM ----------
 
@@ -34,7 +32,6 @@ def find_alignment_rectangles(binary):
     max_height = expected_height * (1 + tolerance)
 
     rectangles = []
-
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
         if min_width <= w <= max_width and min_height <= h <= max_height:
@@ -122,7 +119,7 @@ def process_gabarito(image_path):
     prova_points = [grid_centers[5][col] for col in range(2, 6)]
     prova_id = read_binary_value(binary, prova_points)
 
-    respostas = read_answers(binary, grid_centers, debug=True)
+    respostas = read_answers(binary, grid_centers, debug=False)
 
     return {
         "Aluno_ID": student_id,
@@ -156,9 +153,6 @@ def load_gabarito(filepath):
 
 # ---------- EXCEL ----------
 
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill
-
 def export_to_excel(resultados, gabarito, filename="resultados.xlsx"):
     wb = Workbook()
     ws = wb.active
@@ -172,9 +166,7 @@ def export_to_excel(resultados, gabarito, filename="resultados.xlsx"):
     verde_fill = PatternFill(start_color="FF00FF00", end_color="FF00FF00", fill_type="solid") #verde
     amarelo_fill = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")# amarelo
 
-    # ----------------------------
-    # Gabaritos oficiais de todas as provas
-    # ----------------------------
+    # Gabaritos oficiais
     for prova_id in sorted(gabarito.keys()):
         prova_gabarito = gabarito[prova_id]
         gabarito_row = [f"GABARITO_P{prova_id}", ""]
@@ -184,9 +176,7 @@ def export_to_excel(resultados, gabarito, filename="resultados.xlsx"):
         gabarito_row.append("")
         ws.append(gabarito_row)
 
-    # ----------------------------
     # Dados dos alunos
-    # ----------------------------
     for r in resultados:
         aluno_id = r["Aluno_ID"]
         prova_id = str(r["Prova_ID"])
@@ -205,8 +195,6 @@ def export_to_excel(resultados, gabarito, filename="resultados.xlsx"):
                 peso_alt = info["pesos_alternativas"].get(resposta_aluno, 0.0)
                 pontos = peso_q * peso_alt
                 total += pontos
-                correta = info["correta"]
-
                 row.append(resposta_aluno)
             else:
                 row.append("-")
@@ -214,56 +202,46 @@ def export_to_excel(resultados, gabarito, filename="resultados.xlsx"):
         row.append(total)
         ws.append(row)
 
-        # aplicar cores azul / verde / vermelho
+        # aplicar cores
         for i, questao in enumerate(questoes):
             cell = ws.cell(row=ws.max_row, column=i + 3)
             correta = prova_gabarito.get(questao, {}).get("correta")
             pesos_alt = prova_gabarito.get(questao, {}).get("pesos_alternativas", {})
-
             resposta_aluno = respostas[i] if i < len(respostas) else "-"
 
             if correta:
                 if resposta_aluno == correta:
                     peso_alt = pesos_alt.get(resposta_aluno, 0.0)
                     if abs(peso_alt - 1.0) < 1e-6:
-                        cell.fill = verde_fill  # acerto total
+                        cell.fill = verde_fill
                     elif 0.1 < peso_alt < 1.0:
-                        cell.fill = amarelo_fill  # acerto parcial (correta, mas peso parcial)
+                        cell.fill = amarelo_fill
                     else:
                         cell.fill = vermelho_fill
                 else:
-                    # resposta diferente da correta
                     peso_alt = pesos_alt.get(resposta_aluno, 0.0)
                     if peso_alt > 0.0:
-                        cell.fill = amarelo_fill  # acerto parcial
+                        cell.fill = amarelo_fill
                     else:
                         cell.fill = vermelho_fill
             else:
                 cell.fill = vermelho_fill
 
-
     wb.save(filename)
     print(f"Arquivo {filename} salvo com sucesso.")
 
+# ---------- EXECUÇÃO COM MULTIPROCESSING ----------
 
-# ---------- EXECUÇÃO ----------
-
-def run_correction(image_paths, gabarito_data, output_excel_path):
+def run_correction(image_paths, gabarito_data, output_excel_path, workers=None):
     """
-    Função principal para executar a correção.
-
-    Args:
-        image_paths (list): Lista de caminhos completos para as imagens dos gabaritos.
-        gabarito_data (dict): O dicionário de gabarito carregado pela função load_gabarito.
-        output_excel_path (str): Caminho completo onde o arquivo Excel de resultados será salvo.
+    Função principal para executar a correção em paralelo.
     """
-    resultados = []
-    for path in image_paths:
-        resultado = process_gabarito(path)
-        if resultado:
-            resultados.append(resultado)
-        # Opcional: Remover a imagem após o processamento para economizar espaço se não for mais necessária
-        # os.remove(path)
+    if workers is None:
+        workers = max(1, cpu_count() // 2)  # usa metade dos núcleos por padrão
 
+    with Pool(processes=workers) as pool:
+        resultados = pool.map(process_gabarito, image_paths)
+
+    resultados = [r for r in resultados if r]
     export_to_excel(resultados, gabarito_data, filename=output_excel_path)
-    return output_excel_path # Retorna o caminho do arquivo gerado
+    return output_excel_path
