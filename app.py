@@ -16,10 +16,8 @@ app.config['UPLOAD_FOLDER'] = 'uploads/'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 app.config['TEMPLATE_GABARITO_FOLDER'] = 'templates_gabarito/'
 
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
-if not os.path.exists(app.config['TEMPLATE_GABARITO_FOLDER']):
-    os.makedirs(app.path.join(app.root_path, app.config['TEMPLATE_GABARITO_FOLDER']))
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['TEMPLATE_GABARITO_FOLDER'], exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and \
