@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 
 # Importa as funções do corretor
-from corretor import load_gabarito, run_correction
+from corretor import load_gabarito, run_correction_parallel
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
@@ -78,7 +78,7 @@ def upload_file():
             output_excel_path = os.path.join(target_folder, output_excel_filename)
 
             # limite de workers pode ser ajustado: ex. workers=2
-            run_correction(image_paths, gabarito_data, output_excel_path, workers=2)
+            run_correction_parallel(image_paths, gabarito_data, output_excel_path)
 
             return send_file(output_excel_path, as_attachment=True, download_name=output_excel_filename)
 
