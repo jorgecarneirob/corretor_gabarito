@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 messageDiv.textContent = 'Correção concluída! O arquivo Excel foi baixado.';
                 messageDiv.style.color = 'green';
 //                correctionForm.reset(); // Limpa o formulário após o sucesso
-                generateExamAnswerFields(); // Regenera campos de gabarito
+//                generateExamAnswerFields(); // Regenera campos de gabarito
             } else {
                 const errorText = await response.text();
                 messageDiv.textContent = `Erro: ${errorText}`;
