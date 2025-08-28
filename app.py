@@ -1,12 +1,16 @@
 import os
 from flask import Flask, request, render_template, redirect, url_for, send_file, send_from_directory
 from werkzeug.utils import secure_filename
-from datetime import datetime
 import json
+from io import BytesIO
+from multiprocessing import Pool, cpu_count
+import logging
 
-# Importa as funções do corretor
-from corretor import load_gabarito, run_correction_parallel
+# Importa as funções do seu script corretor
+from corretor import load_gabarito, process_gabarito, export_to_excel
 
+# Configuração de logging
+logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
@@ -15,7 +19,7 @@ app.config['TEMPLATE_GABARITO_FOLDER'] = 'templates_gabarito/'
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 if not os.path.exists(app.config['TEMPLATE_GABARITO_FOLDER']):
-    os.makedirs(app.config['TEMPLATE_GABARITO_FOLDER'])
+    os.makedirs(app.path.join(app.root_path, app.config['TEMPLATE_GABARITO_FOLDER']))
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -38,10 +42,15 @@ def upload_file():
         professor_name = request.form['professor_name']
         exam_date = request.form['exam_date']
         turma = request.form['turma']
-        num_exam_types = int(request.form['num_exam_types'])
-
-        exam_answers_json = request.form['exam_answers']
-        exam_answers_data = json.loads(exam_answers_json)
+        
+        exam_answers_json = request.form.get('exam_answers')
+        if not exam_answers_json:
+            return "Erro: Dados do gabarito ausentes.", 400
+        
+        try:
+            exam_answers_data = json.loads(exam_answers_json)
+        except json.JSONDecodeError:
+            return "Erro: Dados do gabarito em formato inválido.", 400
 
         folder_name = f"{professor_name}_{exam_date}_{turma}".replace(" ", "_").replace("/", "-")
         target_folder = os.path.join(app.config['UPLOAD_FOLDER'], folder_name)
@@ -59,31 +68,71 @@ def upload_file():
 
         uploaded_files = request.files.getlist('gabarito_images')
         image_paths = []
-        for file in uploaded_files:
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(target_folder, filename)
-                file.save(filepath)
-                image_paths.append(filepath)
-            else:
-                return f"Tipo de arquivo não permitido para {file.filename}", 400
-
-        if not image_paths:
-            return "Nenhuma imagem foi enviada ou arquivos inválidos.", 400
-
         try:
+            for file in uploaded_files:
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    filepath = os.path.join(target_folder, filename)
+                    file.save(filepath)
+                    image_paths.append(filepath)
+                else:
+                    raise ValueError(f"Tipo de arquivo não permitido para {file.filename}")
+
+            if not image_paths:
+                raise ValueError("Nenhuma imagem foi enviada ou arquivos inválidos.")
+
             gabarito_data = load_gabarito(temp_gabarito_path)
+            if gabarito_data is None:
+                raise Exception("Falha ao carregar o gabarito. Verifique o formato do arquivo.")
 
-            output_excel_filename = f"resultados_{folder_name}.xlsx"
-            output_excel_path = os.path.join(target_folder, output_excel_filename)
+            # CHAMA A FUNÇÃO CORRETA AGORA
+            logging.info("Iniciando correção em paralelo...")
+            num_processes = min(cpu_count(), 4)
+            
+            # ATENÇÃO: PARA GERAR IMAGENS DE DEPURAÇÃO, DEIXE save_debug=True
+            # PARA PRODUÇÃO, MUDE PARA save_debug=False
+            save_debug = False 
+            
+            with Pool(processes=num_processes) as pool:
+                resultados = pool.starmap(process_gabarito, [(path, save_debug) for path in image_paths])
+            
+            resultados = [r for r in resultados if r is not None]
 
-            # limite de workers pode ser ajustado: ex. workers=2
-            run_correction_parallel(image_paths, gabarito_data, output_excel_path)
+            if not resultados:
+                raise Exception("O processo de correção não gerou resultados.")
 
-            return send_file(output_excel_path, as_attachment=True, download_name=output_excel_filename)
+            output_excel_path = export_to_excel(resultados, gabarito_data, filename=os.path.join(target_folder, f"resultados_{folder_name}.xlsx"))
+
+            if not output_excel_path:
+                raise Exception("O processo de exportação não gerou um arquivo de resultados.")
+
+            with open(output_excel_path, 'rb') as f:
+                excel_bytes = BytesIO(f.read())
+            
+            # Limpeza de arquivos temporários e de depuração
+            temp_files = [temp_gabarito_path, output_excel_path]
+            temp_files.extend(image_paths)
+            if save_debug:
+                # Se save_debug for True, encontra e remove os arquivos de depuração também
+                for path in image_paths:
+                    base = os.path.splitext(os.path.basename(path))[0]
+                    temp_files.extend([
+                        os.path.join(target_folder, f"{base}_warp.png"),
+                        os.path.join(target_folder, f"{base}_respostas.png")
+                    ])
+
+            for path in temp_files:
+                if os.path.exists(path):
+                    os.remove(path)
+                    
+            excel_bytes.seek(0)
+            return send_file(excel_bytes, as_attachment=True, download_name=os.path.basename(output_excel_path), mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
         except Exception as e:
-            app.logger.error(f"Erro durante o processamento: {e}")
+            logging.error(f"Erro durante o processamento: {e}", exc_info=True)
             return f"Ocorreu um erro no processamento: {e}", 500
 
     return redirect(url_for('index'))
+
+if __name__ == '__main__':
+    app.run(debug=True)

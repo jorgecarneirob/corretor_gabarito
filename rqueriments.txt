@@ -1,5 +1,0 @@
-Flask
-Werkzeug
-numpy
-opencv-python
-openpyxl
