@@ -305,3 +305,4 @@ def run_correction_parallel(image_paths, gabarito_data, output_excel_path):
 # --- FUNÇÃO AUXILIAR PARA O APP.PY CHAMAR DIRETO ---
 def process_single_file_and_get_results(image_path, gabarito_data):
     return process_gabarito(image_path, save_debug=False)
+//
